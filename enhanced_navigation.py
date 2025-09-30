@@ -18,7 +18,6 @@ class EnhancedNavigationSystem:
         self.geocoder = Nominatim(user_agent="RouteOptimizer-Robust-v1.0")
     
     def geocode_location(self, location_name: str) -> Optional[Location]:
-        """Geocode location with caching"""
         cache_key = location_name.lower().strip()
         if cache_key in self.cache:
             return self.cache[cache_key]
@@ -90,19 +89,16 @@ class EnhancedNavigationSystem:
         if not start or not end:
             return {"success": False, "message": "Invalid start or end location"}
         
-        # Always get direct route first for comparison
         direct_route = self.calculate_direct_route(start, end)
         
         if not direct_route["success"]:
             return direct_route
-        
-        # If showing direct route only or no obstacles
+
         if show_direct or not self.blockages:
             if show_direct:
                 direct_route["route_type"] = f"🟢 Direct Route - Obstacles Ignored ({direct_route.get('service_used', 'Unknown')})"
             return direct_route
-        
-        # Check direct route for conflicts
+
         st.info("🔍 Analyzing route for obstacles...")
         conflicts = self.route_engine.calculate_route_conflicts(direct_route['route'], self.blockages)
         
@@ -113,13 +109,11 @@ class EnhancedNavigationSystem:
                 "conflicts": conflicts
             })
             return direct_route
-        
-        # Route has conflicts - find avoidance route
+
         conflict_pct = conflicts['conflict_percentage']
         st.error(f"🚨 MAJOR CONFLICT DETECTED: {conflict_pct:.1f}% of route passes through obstacles!")
         st.info("🛠️ Generating strong avoidance route...")
-        
-        # Use more aggressive avoidance
+
         avoidance_route = self.route_engine.find_optimal_avoidance_route(start, end, self.blockages)
         
         if avoidance_route:
@@ -153,8 +147,7 @@ class EnhancedNavigationSystem:
                 "service_used": avoidance_route.get('service', 'Unknown'),
                 "avoidance_success": not avoidance_route['conflicts'].get('has_conflicts', True)
             }
-        
-        # Complete failure - return direct route with strong warnings
+
         st.error("❌ CRITICAL: Could not find any viable avoidance route!")
         st.error("🚨 WARNING: Route will pass through obstacle areas - USE EXTREME CAUTION!")
         
@@ -168,7 +161,7 @@ class EnhancedNavigationSystem:
             "route_type": f"🔴 DANGEROUS ROUTE - OBSTACLES NOT AVOIDED ({direct_route.get('service_used', 'Unknown')})",
             "method": "FALLBACK - Avoidance system failed",
             "conflicts": conflicts,
-            "efficiency_score": 0,  # Zero efficiency for dangerous routes
+            "efficiency_score": 0,  
             "warning": f"CRITICAL: Route passes through {len(conflicts['conflict_points'])} obstacle areas",
             "service_used": direct_route.get('service_used', 'Unknown'),
             "avoidance_success": False,

@@ -1,33 +1,25 @@
-"""
-Streamlit application with reliable route optimization
-"""
 import streamlit as st
 import folium
 from enhanced_navigation import EnhancedNavigationSystem
 from geopy.distance import geodesic
 
 def create_map_visualization(start, end, route_data, blockages, direct_route_data=None):
-    """Create interactive map with route visualization"""
     
-    # Calculate map center and zoom
     center_lat = (start.lat + end.lat) / 2
     center_lon = (start.lon + start.lon) / 2
     
     distance = geodesic((start.lat, start.lon), (end.lat, end.lon)).kilometers
     zoom = max(11, 15 - int(distance / 5))
     
-    # Create map
     m = folium.Map(
         location=[center_lat, center_lon], 
         zoom_start=zoom, 
         tiles='OpenStreetMap'
     )
     
-    # Add tile layers
     folium.TileLayer('CartoDB positron', name='Clean').add_to(m)
     folium.TileLayer('CartoDB dark_matter', name='Dark').add_to(m)
     
-    # Add start marker
     folium.Marker(
         [start.lat, start.lon],
         popup=f"<b>🚀 START</b><br>{start.name[:60]}",
@@ -35,7 +27,6 @@ def create_map_visualization(start, end, route_data, blockages, direct_route_dat
         icon=folium.Icon(color='green', icon='play')
     ).add_to(m)
     
-    # Add end marker
     folium.Marker(
         [end.lat, end.lon],
         popup=f"<b>🏁 DESTINATION</b><br>{end.name[:60]}",
@@ -43,7 +34,6 @@ def create_map_visualization(start, end, route_data, blockages, direct_route_dat
         icon=folium.Icon(color='red', icon='stop')
     ).add_to(m)
     
-    # Add direct route (reference) if available
     if direct_route_data and direct_route_data.get('route'):
         folium.PolyLine(
             locations=direct_route_data['route'],
@@ -59,14 +49,12 @@ def create_map_visualization(start, end, route_data, blockages, direct_route_dat
             tooltip="Direct route (reference)"
         ).add_to(m)
     
-    # Add main route
     if route_data.get("success") and route_data.get("route"):
         route = route_data["route"]
         route_type = route_data.get('route_type', '')
         efficiency = route_data.get('efficiency_score', 0)
         has_conflicts = route_data.get('conflicts', {}).get('has_conflicts', False)
         
-        # Determine route color and style
         if '🟢' in route_type:
             color = '#27AE60'
             weight = 6
@@ -83,8 +71,7 @@ def create_map_visualization(start, end, route_data, blockages, direct_route_dat
             color = '#E74C3C'
             weight = 5
             opacity = 0.7
-        
-        # Route style
+
         route_style = {
             'weight': weight,
             'color': color,
@@ -93,8 +80,7 @@ def create_map_visualization(start, end, route_data, blockages, direct_route_dat
         
         if has_conflicts:
             route_style['dashArray'] = '8, 4'
-        
-        # Add route line
+
         folium.PolyLine(
             locations=route,
             popup=f"""
@@ -112,7 +98,6 @@ def create_map_visualization(start, end, route_data, blockages, direct_route_dat
             **route_style
         ).add_to(m)
         
-        # Add waypoints if present
         waypoints = route_data.get('waypoints', [])
         if waypoints:
             for i, (wp_lat, wp_lon) in enumerate(waypoints):
@@ -123,7 +108,6 @@ def create_map_visualization(start, end, route_data, blockages, direct_route_dat
                     icon=folium.Icon(color='blue', icon='location-arrow')
                 ).add_to(m)
         
-        # Highlight conflict areas
         conflicts = route_data.get('conflicts', {})
         if conflicts.get('conflict_points'):
             for i, conflict in enumerate(conflicts['conflict_points'][:8]):  # Limit display
@@ -143,9 +127,7 @@ def create_map_visualization(start, end, route_data, blockages, direct_route_dat
                     weight=2
                 ).add_to(m)
     
-    # Add obstacles
     for i, obstacle in enumerate(blockages):
-        # Main danger zone
         folium.Circle(
             location=[obstacle.lat, obstacle.lon],
             radius=obstacle.radius,
@@ -166,7 +148,6 @@ def create_map_visualization(start, end, route_data, blockages, direct_route_dat
             weight=3
         ).add_to(m)
         
-        # Safety buffer
         folium.Circle(
             location=[obstacle.lat, obstacle.lon],
             radius=obstacle.radius * 1.3,
@@ -180,7 +161,6 @@ def create_map_visualization(start, end, route_data, blockages, direct_route_dat
             dashArray='4, 4'
         ).add_to(m)
         
-        # Center marker
         folium.Marker(
             [obstacle.lat, obstacle.lon],
             popup=f"🚧 {obstacle.description}",
@@ -188,7 +168,6 @@ def create_map_visualization(start, end, route_data, blockages, direct_route_dat
             icon=folium.Icon(color='darkred', icon='exclamation-triangle')
         ).add_to(m)
     
-    # Add layer control
     folium.LayerControl().add_to(m)
     return m
 
@@ -199,7 +178,6 @@ def main():
         layout="wide"
     )
     
-    # Custom CSS
     st.markdown("""
     <style>
     .big-title {
@@ -230,21 +208,18 @@ def main():
     </style>
     """, unsafe_allow_html=True)
     
-    # Header
     st.markdown('<h1 class="big-title">🎯 Advanced Route Optimizer</h1>', unsafe_allow_html=True)
     st.markdown('<p class="subtitle">Intelligent Path Planning with Real-Time Obstacle Avoidance</p>', unsafe_allow_html=True)
     
-    # Initialize system
     if 'navigation_system' not in st.session_state:
         st.session_state.navigation_system = EnhancedNavigationSystem()
     
     nav_system = st.session_state.navigation_system
     
-    # Sidebar
     with st.sidebar:
         st.header("🎯 Configuration Panel")
         
-        # Location inputs
+
         st.subheader("📍 Route Endpoints")
         start_input = st.text_input(
             "Start Location",
@@ -257,7 +232,6 @@ def main():
             help="Enter destination address or landmark"
         )
         
-        # Route options
         st.subheader("⚙️ Route Options")
         direct_mode = st.checkbox(
             "Direct route mode",
@@ -266,7 +240,6 @@ def main():
         
         st.markdown("---")
         
-        # Obstacle management
         st.subheader("🚧 Obstacle Management")
         
         with st.expander("➕ Add New Obstacle"):
@@ -286,8 +259,7 @@ def main():
             if st.button("Add Obstacle"):
                 nav_system.add_blockage(obs_lat, obs_lon, obs_radius, obs_type)
                 st.rerun()
-        
-        # Current obstacles
+
         if nav_system.blockages:
             st.subheader(f"Active Obstacles ({len(nav_system.blockages)})")
             
@@ -310,19 +282,16 @@ def main():
                 nav_system.clear_blockages()
                 st.rerun()
     
-    # Main content
     main_col, control_col = st.columns([2, 1])
     
     with control_col:
         st.subheader("🎯 Route Control")
-        
-        # Status display
+
         if start_input and end_input:
             st.markdown('<div class="metric-card success-card">✅ <b>Ready</b><br>Locations configured</div>', unsafe_allow_html=True)
         else:
             st.markdown('<div class="metric-card warning-card">⚠️ <b>Setup Required</b><br>Enter start and end locations</div>', unsafe_allow_html=True)
         
-        # Obstacle status
         obs_count = len(nav_system.blockages)
         if obs_count == 0:
             st.markdown('<div class="metric-card success-card">🟢 <b>No Obstacles</b><br>Direct routing available</div>', unsafe_allow_html=True)
@@ -336,8 +305,7 @@ def main():
             st.markdown(f'<div class="metric-card {card_class}">{status_text}</div>', unsafe_allow_html=True)
         
         st.markdown("---")
-        
-        # Calculate button
+
         calc_btn = st.button(
             "🎯 Calculate Route",
             type="primary",
@@ -345,13 +313,10 @@ def main():
             disabled=not (start_input and end_input)
         )
         
-        # Route calculation
         if calc_btn:
             with st.spinner("Calculating optimal route..."):
-                # Progress tracking
                 progress = st.progress(0)
                 
-                # Geocode locations
                 progress.progress(25)
                 start_loc = nav_system.geocode_location(start_input)
                 
@@ -362,7 +327,6 @@ def main():
                     if end_loc:
                         progress.progress(75)
                         
-                        # Calculate routes
                         if direct_mode or not nav_system.blockages:
                             route_result = nav_system.calculate_direct_route(start_loc, end_loc)
                             direct_result = None
@@ -372,7 +336,6 @@ def main():
                         
                         progress.progress(100)
                         
-                        # Store results
                         st.session_state.current_route = route_result
                         st.session_state.direct_reference = direct_result
                         st.session_state.start_location = start_loc
@@ -380,13 +343,11 @@ def main():
                         
                         progress.empty()
                         
-                        # Display results
                         if route_result.get("success"):
                             efficiency = route_result.get('efficiency_score', 0)
                             service = route_result.get('service_used', 'Unknown')
                             has_conflicts = route_result.get('conflicts', {}).get('has_conflicts', False)
                             
-                            # Success message
                             if efficiency >= 80 and not has_conflicts:
                                 st.balloons()
                                 st.success("🏆 Excellent route calculated!")
@@ -395,7 +356,6 @@ def main():
                             else:
                                 st.info("📊 Route calculated")
                             
-                            # Metrics
                             st.markdown("### 📊 Route Summary")
                             
                             met_col1, met_col2 = st.columns(2)
@@ -406,7 +366,6 @@ def main():
                                 st.metric("Duration", f"{route_result['estimated_time_minutes']:.0f} min")
                                 st.metric("Efficiency", f"{efficiency:.1f}%")
                             
-                            # Conflict status
                             if has_conflicts:
                                 conflict_pct = route_result.get('conflicts', {}).get('conflict_percentage', 0)
                                 st.error(f"⚠️ Route conflicts: {conflict_pct:.1f}%")
@@ -424,7 +383,6 @@ def main():
     with main_col:
         st.subheader("🗺️ Interactive Route Map")
         
-        # Display map or instructions
         if hasattr(st.session_state, 'current_route') and st.session_state.current_route.get('success'):
             try:
                 route_map = create_map_visualization(
@@ -437,7 +395,6 @@ def main():
                 
                 st.components.v1.html(route_map._repr_html_(), height=600)
                 
-                # Route details
                 with st.expander("📋 Detailed Analysis"):
                     route_info = st.session_state.current_route
                     
@@ -456,8 +413,7 @@ def main():
                         st.write(f"• Duration: {route_info['estimated_time_minutes']:.1f} minutes")
                         st.write(f"• Efficiency: {route_info.get('efficiency_score', 0):.1f}%")
                         st.write(f"• Impact: {route_info.get('blockage_impact', 0):.1f}%")
-                    
-                    # Conflicts
+        
                     conflicts = route_info.get('conflicts', {})
                     if conflicts.get('has_conflicts'):
                         st.markdown("**⚠️ Conflict Analysis:**")
@@ -486,8 +442,7 @@ def main():
             
             The system uses multiple routing services for maximum reliability.
             """)
-    
-    # Footer
+
     st.markdown("---")
     st.markdown(f"""
     <div style='text-align: center; color: #888; font-size: 0.9em;'>
